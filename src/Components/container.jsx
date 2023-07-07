@@ -4,9 +4,9 @@ import CircularProgress from "@material-ui/core/CircularProgress";
 import Webcam from "react-webcam";
 import { IoCameraReverse } from "react-icons/io5";
 import axios from "axios";
-import Container from "./container";
+// import Container from "./container";
 
-const Hero = () => {
+const Container = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [detectedText, setDetectedText] = useState("");
   const [showWebcam, setShowWebcam] = useState(false);
@@ -15,7 +15,8 @@ const Hero = () => {
   const [deviceId, setDeviceId] = useState("");
   const [detectedImages, setDetectedImages] = useState([]);
   const [responseImage, setResponseImage] = useState("");
-
+  const [containersealpresent, setContainersealpresent] = useState(Boolean);
+  const [detectedStickerImages, setDetectedStickerImages] = useState([]);
   const webcamRef = useRef(null);
 
   const handleImageUpload = (event) => {
@@ -38,29 +39,67 @@ const Hero = () => {
     setLoading(true);
     if (selectedImage) {
       const formData = new FormData();
-      formData.append("file", file); // Include the "file" field in the FormData
+      formData.append("file", file);
 
       try {
-        const response = await axios.post("/api/uploadfile/", formData);
+        // Simulating the response data from API
+        const response = await axios.post(
+          "http://3.110.230.199/uploadfile/",
+          formData
+        );
 
         if (response.status === 200) {
-          const { filenames, images } = response.data;
+          const {
+            container_number,
+            container_number_image,
+            container_seal_present,
+            container_seal_image,
+            container_sticker_present,
+            container_sticker_image,
+          } = response.data;
+
+          // Printing the container number
+          if (container_number && container_number.length > 0) {
+            console.log("Container Number:", container_number[0]);
+          }
+
+          // Printing the container seal presence
+          console.log("Container Seal Present:", container_seal_present);
+
+          // Printing the container seal images
+          console.log("Container Seal Images:");
+          container_seal_image.forEach((image, index) => {
+            console.log(`Image ${index + 1}: ${image}`);
+          });
+
+          // Printing the container sticker presence
+          console.log("Container Sticker Present:", container_sticker_present);
+
+          // Printing the container sticker images
+          console.log("Container Sticker Images:");
+          container_sticker_image.forEach((image, index) => {
+            console.log(`Image ${index + 1}: ${image}`);
+          });
+
+          // Set the state values
+          setDetectedText(container_number[0]);
+          setResponseImage(container_number_image[0]);
+          setDetectedImages(container_seal_image);
+          setDetectedStickerImages(container_sticker_image);
           if (
-            filenames &&
-            filenames.length > 0 &&
-            images &&
-            images.length > 0
+            container_seal_present === "true" ||
+            container_seal_present === true
           ) {
-            setDetectedText(filenames[0].toString());
-            setResponseImage(images[0].toString());
+            setContainersealpresent("Yes");
+          } else {
+            setContainersealpresent("No");
           }
         }
-
-        setLoading(false);
       } catch (error) {
         console.error("Error detecting text:", error);
-        setLoading(false);
       }
+
+      setLoading(false);
     }
   };
 
@@ -112,7 +151,7 @@ const Hero = () => {
     <div className="bg-indigo-400 py-16 min-h-screen flex items-center justify-center">
       <div className="max-w-3xl mx-auto px-4 mb-16">
         <h1 className="text-white text-4xl font-bold mb-4 flex justify-center">
-          Truck Detection System
+          Container Detection System
         </h1>
         <div className="bg-white rounded-lg shadow-lg p-8">
           <p className="text-gray-700 mb-4 text-2xl font-bold">
@@ -187,7 +226,7 @@ const Hero = () => {
           {detectedText && (
             <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
               <p className="text-gray-700 font-extrabold">
-                Detected License Plate Number:
+                Detected Container Number:
               </p>
               <p className="text-gray-700">{detectedText}</p>
             </div>
@@ -195,7 +234,9 @@ const Hero = () => {
 
           {responseImage && (
             <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
-              <p className="text-gray-700 font-extrabold">Detected Image:</p>
+              <p className="text-gray-700 font-extrabold">
+                Detected Number Image:
+              </p>
               <img
                 src={`data:image/jpeg;base64,${responseImage}`}
                 alt="Detected Image"
@@ -203,11 +244,35 @@ const Hero = () => {
               />
             </div>
           )}
-
+          {containersealpresent && (
+            <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
+              <p className="text-gray-700 font-extrabold">
+                Container Seal Present:
+              </p>
+              <p className="text-gray-700">{containersealpresent}</p>
+            </div>
+          )}
           {detectedImages.map((img, index) => {
             return (
               <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
-                <p className="text-gray-700 font-extrabold">Detected Image:</p>
+                <p className="text-gray-700 font-extrabold">
+                  Detected Seal Image:
+                </p>
+                <img
+                  key={index}
+                  src={`data:image/jpeg;base64,${img}`}
+                  alt={`Detected ${index}`}
+                  className="max-w-full rounded-lg mt-2"
+                />
+              </div>
+            );
+          })}
+          {detectedStickerImages.map((img, index) => {
+            return (
+              <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
+                <p className="text-gray-700 font-extrabold">
+                  Detected Sticker Image:
+                </p>
                 <img
                   key={index}
                   src={`data:image/jpeg;base64,${img}`}
@@ -223,4 +288,4 @@ const Hero = () => {
   );
 };
 
-export default Hero;
+export default Container;
