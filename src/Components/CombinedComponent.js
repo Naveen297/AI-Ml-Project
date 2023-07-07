@@ -4,31 +4,37 @@ import CircularProgress from "@material-ui/core/CircularProgress";
 import Webcam from "react-webcam";
 import { IoCameraReverse } from "react-icons/io5";
 import axios from "axios";
-// import Container from "./container";
 
-const Container = () => {
-  const [selectedImage2, setSelectedImage2] = useState(null);
-  const [detectedText2, setDetectedText2] = useState("");
-  const [showWebcam2, setShowWebcam2] = useState(false);
-  const [loading2, setLoading] = useState(false);
-  const [file2, setFile2] = useState(null);
-  const [deviceId2, setDeviceId2] = useState("");
-  const [detectedImages2, setDetectedImages2] = useState([]);
-  const [responseImage2, setResponseImage2] = useState("");
-  const [containersealpresent2, setContainersealpresent2] = useState(Boolean);
-  const [detectedStickerImages2, setDetectedStickerImages2] = useState([]);
-  const webcamRef2 = useRef(null);
+const CombinedComponent = () => {
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [detectedText, setDetectedText] = useState("");
+  const [showWebcam, setShowWebcam] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState(null);
+  const [deviceId, setDeviceId] = useState("");
+  const [detectedImages, setDetectedImages] = useState([]);
+  const [responseImage, setResponseImage] = useState("");
+  const [responseImagetruck, setResponseImagetruck] = useState("");
+  const [containersealpresent, setContainersealpresent] = useState(false);
+  const [detectedStickerImages, setDetectedStickerImages] = useState([]);
 
-  const handleImageUpload2 = (event) => {
+  const [stickerPresent, setStickerPresent] = useState("");
+  const [sealPresent, setSealPresent] = useState("");
+
+  const TotalStickerImages = detectedStickerImages.length;
+  const TotalSealImages = detectedImages.length;
+  const webcamRef = useRef(null);
+
+  const handleImageUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      setFile2(file);
-      setSelectedImage2(URL.createObjectURL(file));
-      setDetectedText2("");
+      setFile(file);
+      setSelectedImage(URL.createObjectURL(file));
+      setDetectedText("");
     }
   };
 
-  const base64ToBlob2 = (base64, mimeType) => {
+  const base64ToBlob = (base64, mimeType) => {
     var byteString = window.atob(base64.split(",")[1]);
     var arrayBuffer = new ArrayBuffer(byteString.length);
     var uintArray = new Uint8Array(arrayBuffer);
@@ -40,8 +46,8 @@ const Container = () => {
     return new Blob([arrayBuffer], { type: mimeType });
   };
 
-  const capture2 = React.useCallback(() => {
-    const imageSrc = webcamRef2.current.getScreenshot();
+  const capture = React.useCallback(() => {
+    const imageSrc = webcamRef.current.getScreenshot();
     const image = new Image();
     image.src = imageSrc;
     image.onload = () => {
@@ -69,26 +75,28 @@ const Container = () => {
       ctx.drawImage(image, 0, 0, width, height);
 
       const base64Image = canvas.toDataURL("image/jpeg");
-      const blob = base64ToBlob2(base64Image, "image/jpeg");
+      const blob = base64ToBlob(base64Image, "image/jpeg");
 
-      setFile2(blob);
-      setSelectedImage2(base64Image);
-      setDetectedText2("");
-      setShowWebcam2(false);
+      setFile(blob);
+      setSelectedImage(base64Image);
+      setDetectedText("");
+      setShowWebcam(false);
     };
-  }, [webcamRef2]);
+  }, [webcamRef]);
 
-  const handleTextDetection2 = async () => {
+  const handleTextDetection = async () => {
     setLoading(true);
-    if (selectedImage2) {
+    if (selectedImage) {
       const formData = new FormData();
-      formData.append("file", file2);
+      formData.append("file", file);
 
       try {
         // Simulating the response data from API
-        const response = await axios.post("/api2/uploadfile/", formData);
+        const response2 = await axios.post("/api2/uploadfile/", formData);
+        const response1 = await axios.post("/api/uploadfile/", formData);
 
-        if (response.status === 200) {
+        if (response1.status === 200 && response2.status === 200) {
+          const { filenames, images } = response1.data;
           const {
             container_number,
             container_number_image,
@@ -96,43 +104,48 @@ const Container = () => {
             container_seal_image,
             container_sticker_present,
             container_sticker_image,
-          } = response.data;
-
-          // Printing the container number
-          if (container_number && container_number.length > 0) {
-            console.log("Container Number:", container_number[0]);
+          } = response2.data;
+          // console.log(container_number_image)
+          // Set the state values for Text Detection
+          if (
+            filenames &&
+            filenames.length > 0 &&
+            images &&
+            images.length > 0
+          ) {
+            setDetectedText(filenames[0].toString());
+            setResponseImagetruck(images[0].toString());
           }
 
-          // Printing the container seal presence
-          console.log("Container Seal Present:", container_seal_present);
+          // Set the state values for Container Detection
+          if (container_number && container_number.length > 0) {
+            setDetectedText(container_number[0]);
+          }
 
-          // Printing the container seal images
-          console.log("Container Seal Images:");
-          container_seal_image.forEach((image, index) => {
-            console.log(`Image ${index + 1}: ${image}`);
-          });
+          setContainersealpresent(container_seal_present === "true");
 
-          // Printing the container sticker presence
-          console.log("Container Sticker Present:", container_sticker_present);
+          setResponseImage(container_number_image);
+          setDetectedImages(container_seal_image || []);
+          setDetectedStickerImages(container_sticker_image || []);
 
-          // Printing the container sticker images
-          console.log("Container Sticker Images:");
-          container_sticker_image.forEach((image, index) => {
-            console.log(`Image ${index + 1}: ${image}`);
-          });
-
-          // Set the state values
-          setDetectedText2(container_number[0]);
-          setResponseImage2(container_number_image[0]);
-          setDetectedImages2(container_seal_image);
-          setDetectedStickerImages2(container_sticker_image);
-          if (
-            container_seal_present === "true" ||
-            container_seal_present === true
-          ) {
-            setContainersealpresent2("Yes");
+          console.log(container_sticker_image);
+          console.log(container_seal_image);
+          console.log(container_number_image);
+          console.log(container_number);
+          console.log(container_seal_present);
+          console.log(container_sticker_present);
+          console.log(filenames);
+          console.log(images);
+          if (container_sticker_present === true) {
+            setStickerPresent("YES ");
           } else {
-            setContainersealpresent2("No");
+            setStickerPresent("NO ");
+          }
+
+          if (container_seal_present === true) {
+            setSealPresent("YES ");
+          } else {
+            setSealPresent("NO ");
           }
         }
       } catch (error) {
@@ -143,7 +156,7 @@ const Container = () => {
     }
   };
 
-  const getDevices2 = async () => {
+  const getDevices = async () => {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(
       (device) => device.kind === "videoinput"
@@ -153,45 +166,32 @@ const Container = () => {
     );
 
     if (backCam) {
-      setDeviceId2(backCam.deviceId);
+      setDeviceId(backCam.deviceId);
     }
   };
 
-  const switchCamera2 = async () => {
+  const switchCamera = async () => {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(
       (device) => device.kind === "videoinput"
     );
     const currentIndex = videoDevices.findIndex(
-      (device) => device.deviceId === deviceId2
+      (device) => device.deviceId === deviceId
     );
     const nextIndex = (currentIndex + 1) % videoDevices.length;
 
-    setDeviceId2(videoDevices[nextIndex].deviceId);
-  };
-
-  const fetchImage = (filename) => {
-    fetch(`http://127.0.0.1:5000/get-image/${filename}`)
-      .then((response) => response.json())
-      .then((data) => {
-        const imageBase64 = data.image;
-        const imageSrc = `data:image/jpeg;base64,${imageBase64}`;
-        setDetectedImages2((prevImages) => [...prevImages, imageSrc]);
-      })
-      .catch((error) => {
-        console.error("Error fetching image:", error);
-      });
+    setDeviceId(videoDevices[nextIndex].deviceId);
   };
 
   useEffect(() => {
-    getDevices2();
+    getDevices();
   }, []);
 
   return (
     <div className="bg-indigo-400 flex">
-      <div className="max-w-3xl mx-auto px-4 mt-10 mb-10">
+      <div className="max-w-3xl mx-auto px-4 mt-14 mb-20">
         <h1 className="text-white text-4xl font-bold mb-4 flex justify-center">
-          Container Detection System
+          Combined Detection System
         </h1>
         <div className="bg-white rounded-lg shadow-lg p-8">
           <p className="text-gray-700 mb-4 text-2xl font-bold">
@@ -200,7 +200,7 @@ const Container = () => {
           <input
             type="file"
             accept="image/*"
-            onChange={handleImageUpload2}
+            onChange={handleImageUpload}
             className="hidden"
             id="uploadInput"
           />
@@ -210,41 +210,41 @@ const Container = () => {
               className="block bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-lg cursor-pointer flex justify-center"
             >
               <BsFillCloudUploadFill className="mr-2 mt-1" size={25} />
-              {selectedImage2 ? "Change Image" : "Upload Image"}
+              {selectedImage ? "Change Image" : "Upload Image"}
             </label>
             <button
-              onClick={() => setShowWebcam2(true)}
+              onClick={() => setShowWebcam(true)}
               className="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-lg"
             >
               Webcam/Camera
             </button>
           </div>
-          {showWebcam2 && (
+          {showWebcam && (
             <div className="mt-4">
               <Webcam
                 audio={false}
-                ref={webcamRef2}
+                ref={webcamRef}
                 screenshotFormat="image/jpeg"
-                videoConstraints={{ deviceId: deviceId2 }}
+                videoConstraints={{ deviceId: deviceId }}
               />
               <button
                 className="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-lg mt-5"
-                onClick={capture2}
+                onClick={capture}
               >
                 Capture photo
               </button>
               <button
-                onClick={switchCamera2}
+                onClick={switchCamera}
                 className="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-lg mt-5 ml-5"
               >
                 <IoCameraReverse size={20} />
               </button>
             </div>
           )}
-          {selectedImage2 && (
+          {selectedImage && (
             <div className="mt-4">
               <img
-                src={selectedImage2}
+                src={selectedImage}
                 alt="Uploaded"
                 className="max-w-full rounded-lg"
               />
@@ -252,47 +252,83 @@ const Container = () => {
           )}
           <div className="mt-6">
             <button
-              onClick={handleTextDetection2}
+              onClick={handleTextDetection}
               className="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-lg"
-              disabled={loading2 || !selectedImage2}
+              disabled={loading || !selectedImage}
             >
-              {loading2 ? (
+              {loading ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
                 "Detect"
               )}
             </button>
           </div>
-          {detectedText2 && (
+          {detectedText && (
             <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
               <p className="text-gray-700 font-extrabold">
-                Detected Container Number:
+                Detected License Plate Number:
               </p>
-              <p className="text-gray-700">{detectedText2}</p>
+              <p className="text-gray-700">{detectedText}</p>
             </div>
           )}
-
-          {responseImage2 && (
+          {responseImage && (
             <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
               <p className="text-gray-700 font-extrabold">
-                Detected Number Image:
+                Detected Container Number Image:
               </p>
               <img
-                src={`data:image/jpeg;base64,${responseImage2}`}
+                src={`data:image/jpeg;base64,${responseImage}`}
                 alt="Detected Image"
                 className="max-w-full rounded-lg mt-2"
               />
             </div>
           )}
-          {containersealpresent2 && (
+          {responseImagetruck && (
+            <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
+              <p className="text-gray-700 font-extrabold">
+                Detected Number plate Image:
+              </p>
+              <img
+                src={`data:image/jpeg;base64,${responseImagetruck}`}
+                alt="Detected Image"
+                className="max-w-full rounded-lg mt-2"
+              />
+            </div>
+          )}
+          {stickerPresent && (
+            <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
+              <p className="text-gray-700 font-extrabold">
+                Container Sticker Present:
+              </p>
+              <p className="text-gray-700">{stickerPresent}</p>
+              <p className="text-gray-700 font-extrabold">
+                Total Number of Sticker Detected: {TotalStickerImages}
+              </p>
+            </div>
+          )}
+          {sealPresent && (
             <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
               <p className="text-gray-700 font-extrabold">
                 Container Seal Present:
               </p>
-              <p className="text-gray-700">{containersealpresent2}</p>
+              <p className="text-gray-700">{sealPresent}</p>
+              <p className="text-gray-700 font-extrabold">
+                Total Number of Seals Detected: {TotalSealImages}
+              </p>
             </div>
           )}
-          {detectedImages2.map((img, index) => {
+          {containersealpresent && (
+            <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
+              <p className="text-gray-700 font-extrabold">
+                Container Seal Present:
+              </p>
+              <p className="text-gray-700">
+                {containersealpresent ? "Yes" : "No"}
+              </p>
+            </div>
+          )}
+
+          {detectedImages.map((img, index) => {
             return (
               <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
                 <p className="text-gray-700 font-extrabold">
@@ -307,7 +343,8 @@ const Container = () => {
               </div>
             );
           })}
-          {detectedStickerImages2.map((img, index) => {
+
+          {detectedStickerImages.map((img, index) => {
             return (
               <div className="mt-6 bg-gray-100 rounded-lg py-4 px-6">
                 <p className="text-gray-700 font-extrabold">
@@ -328,4 +365,4 @@ const Container = () => {
   );
 };
 
-export default Container;
+export default CombinedComponent;

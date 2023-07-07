@@ -27,11 +27,54 @@ const Hero = () => {
     }
   };
 
+  const base64ToBlob = (base64, mimeType) => {
+    var byteString = window.atob(base64.split(",")[1]);
+    var arrayBuffer = new ArrayBuffer(byteString.length);
+    var uintArray = new Uint8Array(arrayBuffer);
+
+    for (var i = 0; i < byteString.length; i++) {
+      uintArray[i] = byteString.charCodeAt(i);
+    }
+
+    return new Blob([arrayBuffer], { type: mimeType });
+  };
+
   const capture = React.useCallback(() => {
     const imageSrc = webcamRef.current.getScreenshot();
-    setSelectedImage(imageSrc);
-    setDetectedText("");
-    setShowWebcam(false);
+    const image = new Image();
+    image.src = imageSrc;
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      const maxWidth = 800;
+      const maxHeight = 800;
+      let width = image.width;
+      let height = image.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height *= maxWidth / width;
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width *= maxHeight / height;
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(image, 0, 0, width, height);
+
+      const base64Image = canvas.toDataURL("image/jpeg");
+      const blob = base64ToBlob(base64Image, "image/jpeg");
+
+      setFile(blob);
+      setSelectedImage(base64Image);
+      setDetectedText("");
+      setShowWebcam(false);
+    };
   }, [webcamRef]);
 
   const handleTextDetection = async () => {
@@ -109,8 +152,8 @@ const Hero = () => {
   }, []);
 
   return (
-    <div className="bg-indigo-400 py-16 min-h-screen flex items-center justify-center">
-      <div className="max-w-3xl mx-auto px-4 mb-16">
+    <div className="bg-indigo-400 flex">
+      <div className="max-w-3xl mx-auto px-4 mt-14 mb-20">
         <h1 className="text-white text-4xl font-bold mb-4 flex justify-center">
           Truck Detection System
         </h1>
